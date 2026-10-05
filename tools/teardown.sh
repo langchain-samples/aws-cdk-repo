@@ -170,8 +170,15 @@ log "RDS instances and CDK's ALB with deletion protection (environment stage/pro
 # CloudFormation deletes a hosted zone only when it is empty, but in ingress mode 'alb' post-deploy/05
 # wrote the hostname's record into CDK's zone, outside CloudFormation.
 if [ "$INGRESS" = alb ] && [ "$ZONE_OWNED" = true ]; then
-  ZONE_ID=$(aws cloudformation describe-stacks --stack-name "$NAME-langsmith" \
-    --query "Stacks[0].Outputs[?OutputKey=='PrivateZoneId'].OutputValue | [0]" --output text 2>/dev/null || true)
+  # A stack that is already gone (a re-run) has no zone left; any other error stops here, or the
+  # destroy would fail later on the non-empty zone.
+  if ! ZONE_ID=$(aws cloudformation describe-stacks --stack-name "$NAME-langsmith" \
+      --query "Stacks[0].Outputs[?OutputKey=='PrivateZoneId'].OutputValue | [0]" --output text 2>&1); then
+    case "$ZONE_ID" in
+      *"does not exist"*) ZONE_ID="" ;;
+      *) die "cannot read the stack $NAME-langsmith ($ZONE_ID). Teardown needs cloudformation:DescribeStacks (README.md, Teardown)." ;;
+    esac
+  fi
   if [ -n "$ZONE_ID" ] && [ "$ZONE_ID" != None ]; then
     RECORD=$(aws route53 list-resource-record-sets --hosted-zone-id "$ZONE_ID" --output json \
       --query "ResourceRecordSets[?Name=='$(echo "$HOST" | tr '[:upper:]' '[:lower:]').' && Type=='A'] | [0]")
@@ -185,7 +192,15 @@ fi
 # CloudFormation deletes a bucket only when it is empty (autoDeleteObjects would add a Lambda).
 if [ "$RETAIN" = destroy ]; then
   for b in "$BLOB" "$SDB"; do
-    if [ "$b" = - ] || ! aws s3api head-bucket --bucket "$b" >/dev/null 2>&1; then continue; fi
+    [ "$b" != - ] || continue
+    # Only a bucket that is already gone (404) is skipped. Skipping on any other error (a 403 without
+    # s3:ListBucket) would leave the bucket full, and the destroy would fail on it later.
+    if ! err=$(aws s3api head-bucket --bucket "$b" 2>&1 >/dev/null); then
+      case "$err" in
+        *"(404)"*) continue ;;
+        *) die "cannot check s3://$b ($err). Teardown needs s3:ListBucket and s3:DeleteObject on it (README.md, Teardown)." ;;
+      esac
+    fi
     log "emptying s3://$b (dataRemovalPolicy 'destroy')"
     aws s3 rm "s3://$b" --recursive --only-show-errors
   done
