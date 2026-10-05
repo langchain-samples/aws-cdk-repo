@@ -1,0 +1,207 @@
+.github/workflows/ci.yml
+  s_ada6696b3cd877::t_7930a3083a058a 1-26
+.gitignore
+  s_ada6696b3cd877::t_2de5d648376faf 1-18
+README.md
+  s_ada6696b3cd877::t_6a1596a3c38ff0 1-881
+bin/iam-pack.ts
+  s_ada6696b3cd877::t_384d038f2dc2a8 1-53
+bin/langsmith.ts
+  s_ada6696b3cd877::t_fa624868a246ef 1-19
+bin/sizes.ts
+  s_ada6696b3cd877::t_6134c0aecbbe1e 1-52
+cdk.json
+  s_ada6696b3cd877::t_7eefddd4b85c04 1-112
+config/example.ts
+  s_ada6696b3cd877::t_1bf029769fa6d0 1-117
+config/examples/alb-ingress.ts
+  s_ada6696b3cd877::t_55541748fada06 1-15
+config/examples/byo-iam.ts
+  s_ada6696b3cd877::t_1f46c9a769f80c 1-30
+config/examples/byo-vpc.ts
+  s_ada6696b3cd877::t_a081ed33752d7f 1-33
+config/examples/irsa-dev.ts
+  s_ada6696b3cd877::t_aae7a53688c7b2 1-14
+config/examples/layout-a.ts
+  s_ada6696b3cd877::t_d3e2ed7e1759c5 1-16
+config/examples/podidentity-dev.ts
+  s_ada6696b3cd877::t_9c3912db48cae4 1-12
+helm/README.md
+  s_ada6696b3cd877::t_685b33c99ec11e 1-5
+helm/aws-load-balancer-controller.yaml
+  s_ada6696b3cd877::t_95885990bf7240 1-24
+helm/cluster-autoscaler.yaml
+  s_ada6696b3cd877::t_78dc0b42f09ea7 1-15
+helm/envoy-gateway.yaml
+  s_ada6696b3cd877::t_a6f9f7d0f34b89 1-18
+helm/external-secrets.yaml
+  s_ada6696b3cd877::t_be9adfd662a3be 1-12
+helm/keda.yaml
+  s_ada6696b3cd877::t_9dd77df1e53040 1-7
+helm/langsmith-ingress-alb.yaml
+  s_ada6696b3cd877::t_e5d382b8ec3f89 1-23
+helm/langsmith-ingress-envoy-gateway.yaml
+  s_ada6696b3cd877::t_a47ac9df07829a 1-13
+helm/langsmith-values.yaml
+  s_ada6696b3cd877::t_e0734543f353a3 1-258
+helm/smithdb-lab.yaml
+  s_ada6696b3cd877::t_d4de25702bc296 1-35
+iam/README.md
+  s_ada6696b3cd877::t_aa35f0e54632e9 1-5
+iam/cdk-execution-policy-1-network-compute.json
+  s_ada6696b3cd877::t_3cfdb535bb971d 1-257
+iam/cdk-execution-policy-2-data.json
+  s_ada6696b3cd877::t_f291beb4fd0f15 1-198
+iam/cdk-execution-policy-3-iam.json
+  s_ada6696b3cd877::t_90dbd5853847fb 1-94
+iam/operator-policy.json
+  s_ada6696b3cd877::t_53cc6b06d1b049 1-119
+jest.config.js
+  s_ada6696b3cd877::t_52d175f9e6f5ae 1-7
+k8s/README.md
+  s_ada6696b3cd877::t_c42aad65e343a0 1-5
+k8s/db-admin-externalsecret.yaml
+  s_ada6696b3cd877::t_3c90f2e2a1ac36 1-20
+k8s/db-bootstrap/bootstrap.sh
+  s_ada6696b3cd877::t_c720534139d84a 1-8
+k8s/db-bootstrap/core.sql
+  s_ada6696b3cd877::t_7d7e828b965524 1-57
+k8s/db-bootstrap/job.yaml
+  s_ada6696b3cd877::t_79332cc034e83a 1-30
+k8s/db-bootstrap/metastore.sql
+  s_ada6696b3cd877::t_f55c7910f4d90f 1-19
+k8s/envoy-gateway-resources.yaml
+  s_ada6696b3cd877::t_dc2ad2fd829eeb 1-111
+k8s/envoy-gateway-target-group-binding.yaml
+  s_ada6696b3cd877::t_692d451678ab6a 1-17
+k8s/externalsecrets.yaml
+  s_ada6696b3cd877::t_2b83264a277fed 1-130
+k8s/storage.yaml
+  s_ada6696b3cd877::t_0ef18b88d0b3a8 1-34
+lib/build-app.ts
+  s_ada6696b3cd877::t_58dd84a06ee0aa 1-49
+lib/components/bastion.ts
+  s_ada6696b3cd877::t_cceb1a22d3cf5a 1-77
+lib/components/dns.ts
+  s_ada6696b3cd877::t_528a0b3b481d39 1-31
+lib/components/eks-addons.ts
+  s_ada6696b3cd877::t_2e719d5475d905 1-107
+lib/components/eks-cluster.ts
+  s_ada6696b3cd877::t_56659baabdf745 1-115
+lib/components/kms.ts
+  s_ada6696b3cd877::t_9028b87077edb5 1-45
+lib/components/load-balancer.ts
+  s_ada6696b3cd877::t_859c3b57e5646e 1-114
+lib/components/node-group.ts
+  s_ada6696b3cd877::t_4c6bd324228c5a 1-69
+lib/components/postgres.ts
+  s_ada6696b3cd877::t_6e5341a5e057ff 1-112
+lib/components/s3-buckets.ts
+  s_ada6696b3cd877::t_3b199d6ea10968 1-66
+lib/components/secrets.ts
+  s_ada6696b3cd877::t_b6b833b77feadf 1-102
+lib/components/security-groups.ts
+  s_ada6696b3cd877::t_31f3b352cf7608 1-78
+lib/components/valkey.ts
+  s_ada6696b3cd877::t_369c24c8539cef 1-83
+lib/components/workload-bindings.ts
+  s_ada6696b3cd877::t_9418500528f2bd 1-35
+lib/config/index.ts
+  s_ada6696b3cd877::t_e1450d04a6b271 1-10
+lib/config/sizing.ts
+  s_ada6696b3cd877::t_782e813133fb11 1-131
+lib/config/types.ts
+  s_ada6696b3cd877::t_2246f10d3d9201 1-369
+lib/config/validate.ts
+  s_ada6696b3cd877::t_80b5e02d172471 1-226
+lib/iam/aws-load-balancer-controller-policy.json
+  s_ada6696b3cd877::t_57dca78774cf9c 1-251
+lib/iam/pack.ts
+  s_ada6696b3cd877::t_bba044c1db9ea8 1-132
+lib/iam/policies.ts
+  s_ada6696b3cd877::t_e08d3e447bed5d 1-222
+lib/iam/roles.ts
+  s_ada6696b3cd877::t_9d33e8f6745bf4 1-325
+lib/load-config.ts
+  s_ada6696b3cd877::t_76c7177ee8d52a 1-24
+lib/naming.ts
+  s_ada6696b3cd877::t_fd6ee881d8972a 1-87
+lib/network-info.ts
+  s_ada6696b3cd877::t_1b67a9dcb13331 1-32
+lib/outputs.ts
+  s_ada6696b3cd877::t_c4ce17d8c7f0d6 1-63
+lib/stacks/langsmith-stack.ts
+  s_ada6696b3cd877::t_a5297215e6b2dd 1-310
+lib/stacks/network-stack.ts
+  s_ada6696b3cd877::t_2e763a28da56c4 1-182
+package-lock.json
+  s_ada6696b3cd877::t_5b64b0aaac2bf5 1-5174
+package.json
+  s_ada6696b3cd877::t_ab709000902986 1-27
+post-deploy/00-import-certificate.sh
+  s_ada6696b3cd877::t_0859ab3a860ded 1-97
+post-deploy/01-seed-secrets.sh
+  s_ada6696b3cd877::t_2e240b6e6f8b42 1-81
+post-deploy/03-mirror-images.sh
+  s_ada6696b3cd877::t_f563678ead9a37 1-97
+post-deploy/04-cluster-prereqs.sh
+  s_ada6696b3cd877::t_10e30f91765acf 1-600
+post-deploy/05-dns-and-smoke-test.sh
+  s_ada6696b3cd877::t_2030efb0102b14 1-128
+post-deploy/README.md
+  s_ada6696b3cd877::t_92013f0a7c5e04 1-5
+post-deploy/lib.sh
+  s_ada6696b3cd877::t_4832718c6e1750 1-232
+post-deploy/settings.env.example
+  s_ada6696b3cd877::t_456d2e7bccd023 1-55
+test/config.test.ts
+  s_ada6696b3cd877::t_feea021bcf9ed6 1-391
+test/fixtures/cdk-outputs-alb.json
+  s_ada6696b3cd877::t_2fd949b9e36229 1-36
+test/fixtures/cdk-outputs-envoy-gateway.json
+  s_ada6696b3cd877::t_bd15521aaeeec1 1-36
+test/fixtures/cdk-outputs-podidentity-layout-b.json
+  s_ada6696b3cd877::t_e3d502ca6c1d1e 1-37
+test/helm-files.test.ts
+  s_ada6696b3cd877::t_5a9e00cfaef8a6 1-115
+test/helpers.ts
+  s_ada6696b3cd877::t_1e28d8080e7353 1-61
+test/iam.test.ts
+  s_ada6696b3cd877::t_058f8f7c35ddf9 1-228
+test/network.test.ts
+  s_ada6696b3cd877::t_24f9ba5c5a5b81 1-113
+test/outputs.test.ts
+  s_ada6696b3cd877::t_1a5503720f6326 1-63
+test/policy-files.test.ts
+  s_ada6696b3cd877::t_24a213de5255d7 1-183
+test/stack.test.ts
+  s_ada6696b3cd877::t_7194bba43721d5 1-340
+test/tags.test.ts
+  s_ada6696b3cd877::t_2cddd35e9ab328 1-143
+tools/check-offline.sh
+  s_ada6696b3cd877::t_29b090306b8323 1-45
+tools/install-tools-al2023.sh
+  s_ada6696b3cd877::t_810a91ec427de5 1-56
+tools/list-resources.sh
+  s_ada6696b3cd877::t_1289202d102228 1-102
+tools/teardown.sh
+  s_ada6696b3cd877::t_22aac3971cdb2b 1-203
+tsconfig.json
+  s_ada6696b3cd877::t_3a94a4dcebf11c 1-21
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "1cdd1e6335ca507941858c8f757d3b113a86afd6",
+  "prompts": {},
+  "sessions": {
+    "s_ada6696b3cd877": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "aa6a9772-408c-46df-99fc-67087f8591b1",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "haithamshahin333 <42976403+haithamshahin333@users.noreply.github.com>"
+    }
+  }
+}
