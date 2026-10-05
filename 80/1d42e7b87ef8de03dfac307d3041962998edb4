@@ -1,0 +1,22 @@
+README.md
+  s_ada6696b3cd877::t_ad368118c8c5a0 12,233,836,855
+  s_ada6696b3cd877::t_896a6ba38804d6 270,518,551,609-616
+tools/teardown.sh
+  s_ada6696b3cd877::t_896a6ba38804d6 173-181,195-203
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "801d42e7b87ef8de03dfac307d3041962998edb4",
+  "prompts": {},
+  "sessions": {
+    "s_ada6696b3cd877": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "aa6a9772-408c-46df-99fc-67087f8591b1",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "haithamshahin333 <42976403+haithamshahin333@users.noreply.github.com>"
+    }
+  }
+}
