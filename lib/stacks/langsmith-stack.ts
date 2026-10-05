@@ -215,7 +215,7 @@ export class LangSmithStack extends Stack {
         iamInputs.loadBalancerControllerPolicyArn = new iam.CfnManagedPolicy(this, 'LoadBalancerControllerPolicy', {
           managedPolicyName: names.lbcManagedPolicy,
           description: 'AWS Load Balancer Controller v3.5.0 (published policy)',
-          policyDocument: loadBalancerControllerPolicy,
+          policyDocument: loadBalancerControllerPolicy(Aws.PARTITION),
         }).ref;
       }
       lbcRole = addWorkloadRole(loadBalancerControllerRoleSpec(iamInputs));
@@ -231,7 +231,7 @@ export class LangSmithStack extends Stack {
     // =========================================================================
     let zoneId = cfg.dns.privateZone.existingZoneId;
     if (cfg.dns.privateZone.enabled) {
-      zoneId = new PrivateDns(this, 'Dns', { cfg, vpc, removalPolicy: dataRemoval }).zoneId;
+      zoneId = new PrivateDns(this, 'Dns', { cfg, vpc }).zoneId;
     }
 
     // =========================================================================

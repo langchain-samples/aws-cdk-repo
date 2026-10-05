@@ -25,6 +25,8 @@
 #      and wait until the controllers have deleted any load balancer they created and the volumes.
 #      Only those namespaces: on a cluster you share, other teams' resources are never touched.
 #   2. `cdk destroy --all` — both stacks (with CDK's ALB, its target group and the DNS record).
+#      First, what would make it fail: the record post-deploy/05 wrote into CDK's zone (ingress
+#      mode 'alb'), and, with dataRemovalPolicy 'destroy', the objects in CDK's buckets.
 #   3. tools/list-resources.sh — what is left.
 #   4. PRINTS (never runs) the commands for what dataRemovalPolicy 'retain' kept on purpose:
 #      buckets, secrets, the KMS key, final snapshots — and for ECR repositories and the bootstrap
@@ -62,14 +64,17 @@ else
   # A path under config/, no "..": it is put into the node command below.
   [[ "$CONFIG" =~ ^[A-Za-z0-9_/-]+$ && "$CONFIG" != *..* && -f "config/$CONFIG.ts" ]] || die "config/$CONFIG.ts not found"
   # Read everything from the config file itself (the same file cdk uses). QUALIFIER is '-' without cdkQualifier.
-  read -r NAME REGION ACCOUNT NS RETAIN INGRESS CLUSTER QUALIFIER < <(npx ts-node --prefer-ts-exts -e \
-    "const c = require('./config/$CONFIG').default;
+  # BLOB/SDB are the buckets CDK created ('-' for none or your own); ZONE_OWNED: CDK created the private zone.
+  read -r NAME REGION ACCOUNT NS RETAIN INGRESS CLUSTER HOST ZONE_OWNED BLOB SDB QUALIFIER < <(npx ts-node --prefer-ts-exts -e \
+    "const c = require('./config/$CONFIG').default; const n = require('./lib/naming').namesFor(c);
      console.log(c.name, c.region, c.account, c.kubernetes.langsmithNamespace, c.dataRemovalPolicy,
-       require('./lib/config').ingressMode(c), require('./lib/naming').namesFor(c).clusterName, c.cdkQualifier || '-');")
+       require('./lib/config').ingressMode(c), n.clusterName, c.dns.hostname, c.dns.privateZone.enabled,
+       c.s3.blob.enabled ? n.blobBucket : '-', c.s3.smithdb.enabled ? n.smithdbBucket : '-', c.cdkQualifier || '-');")
   [ -n "${QUALIFIER:-}" ] || die "could not read config/$CONFIG.ts (does 'npx cdk synth -c config=$CONFIG' work?)"
   [ "$QUALIFIER" != - ] || QUALIFIER=""
 fi
 export AWS_REGION=$REGION AWS_DEFAULT_REGION=$REGION AWS_PAGER=""
+case "$REGION" in us-gov-*) PARTITION=aws-us-gov ;; cn-*) PARTITION=aws-cn ;; *) PARTITION=aws ;; esac
 
 CALLER=$(aws sts get-caller-identity --query Account --output text)
 [ "$CALLER" = "$ACCOUNT" ] || die "your credentials are for account $CALLER, the config is for $ACCOUNT"
@@ -162,6 +167,29 @@ fi
 section "2 cdk destroy"
 # -----------------------------------------------------------------------------
 log "RDS instances and CDK's ALB with deletion protection (environment stage/prod) make this fail: set sizes.deletionProtection: false and deploy first"
+# CloudFormation deletes a hosted zone only when it is empty, but in ingress mode 'alb' post-deploy/05
+# wrote the hostname's record into CDK's zone, outside CloudFormation.
+if [ "$INGRESS" = alb ] && [ "$ZONE_OWNED" = true ]; then
+  ZONE_ID=$(aws cloudformation describe-stacks --stack-name "$NAME-langsmith" \
+    --query "Stacks[0].Outputs[?OutputKey=='PrivateZoneId'].OutputValue | [0]" --output text 2>/dev/null || true)
+  if [ -n "$ZONE_ID" ] && [ "$ZONE_ID" != None ]; then
+    RECORD=$(aws route53 list-resource-record-sets --hosted-zone-id "$ZONE_ID" --output json \
+      --query "ResourceRecordSets[?Name=='$(echo "$HOST" | tr '[:upper:]' '[:lower:]').' && Type=='A'] | [0]")
+    if [ "$RECORD" != null ]; then
+      log "deleting the record $HOST that post-deploy/05 wrote (zone $ZONE_ID)"
+      aws route53 change-resource-record-sets --hosted-zone-id "$ZONE_ID" \
+        --change-batch "$(jq -c '{Changes: [{Action: "DELETE", ResourceRecordSet: .}]}' <<<"$RECORD")" >/dev/null
+    fi
+  fi
+fi
+# CloudFormation deletes a bucket only when it is empty (autoDeleteObjects would add a Lambda).
+if [ "$RETAIN" = destroy ]; then
+  for b in "$BLOB" "$SDB"; do
+    if [ "$b" = - ] || ! aws s3api head-bucket --bucket "$b" >/dev/null 2>&1; then continue; fi
+    log "emptying s3://$b (dataRemovalPolicy 'destroy')"
+    aws s3 rm "s3://$b" --recursive --only-show-errors
+  done
+fi
 npx cdk destroy --all --force "${CDK_ARGS[@]}"
 
 # -----------------------------------------------------------------------------
@@ -189,8 +217,8 @@ aws elasticache delete-snapshot --snapshot-name <snapshot>
 # ECR repositories from post-deploy/03 (with their images):
 aws ecr describe-repositories --query "repositories[?starts_with(repositoryName, '$NAME/')].repositoryName" --output text |
   tr '\t' '\n' | xargs -I{} aws ecr delete-repository --repository-name {} --force
-# Ingress mode 'alb' only: the DNS record post-deploy/05 wrote, if the zone was yours (not created
-# by this app): delete it in Route 53. (Mode 'envoy-gateway': CDK owned the record; it is gone.)
+# Ingress mode 'alb' with your own zone (dns.privateZone.existingZoneId) only: the DNS record
+# post-deploy/05 wrote: delete it in Route 53. (In CDK's zone, step 2 deleted it.)
 EOF
 if [ -n "$QUALIFIER" ]; then
 cat <<EOF
@@ -198,6 +226,6 @@ cat <<EOF
 aws cloudformation delete-stack --stack-name CDKToolkit-$QUALIFIER
 aws s3 rb s3://cdk-$QUALIFIER-assets-$ACCOUNT-$REGION --force   # versioned: empty all versions first if this fails
 # The scoped execution policies (README.md, Appendix C):
-for p in 1-network-compute 2-data 3-iam; do aws iam delete-policy --policy-arn arn:aws:iam::$ACCOUNT:policy/$NAME-cdk-execution-policy-\$p; done
+for p in 1-network-compute 2-data 3-iam; do aws iam delete-policy --policy-arn arn:$PARTITION:iam::$ACCOUNT:policy/$NAME-cdk-execution-policy-\$p; done
 EOF
 fi

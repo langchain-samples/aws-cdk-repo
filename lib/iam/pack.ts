@@ -126,7 +126,7 @@ export function buildIamPack(cfg: LangSmithConfig, opts: PackOptions = {}): IamP
   });
 
   const managedPolicies: Record<string, object> = {};
-  if (cfg.workloadRoles.loadBalancerController) managedPolicies[names.lbcManagedPolicy] = loadBalancerControllerPolicy;
+  if (cfg.workloadRoles.loadBalancerController) managedPolicies[names.lbcManagedPolicy] = loadBalancerControllerPolicy(partition);
 
   return { workloadIdentity: cfg.workloadIdentity, roles, managedPolicies };
 }

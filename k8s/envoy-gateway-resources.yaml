@@ -1,7 +1,7 @@
 # k8s/envoy-gateway-resources.yaml — the Gateway LangSmith uses, and the Envoy proxy settings (ingress mode 'envoy-gateway').
 # Applied with kubectl by post-deploy/04 (step 5) after the Envoy Gateway chart. Edit, then re-apply with:
 #   ./post-deploy/04-cluster-prereqs.sh envoy-gateway
-# Placeholders filled by post-deploy/04: NS (the LangSmith namespace)
+# Placeholders filled by post-deploy/04: NS (the LangSmith namespace) IMAGE_BASE ENVOY_PROXY_IMAGE_TAG
 #
 # Request path: client -> ALB :443 (TLS ends there, CDK) -> Envoy proxy pods :10080 -> HTTPRoute -> Service.
 # The LangSmith chart creates the HTTPRoute for LangSmith (values: gateway.enabled); the Deployments
@@ -34,6 +34,9 @@ spec:
                 matchLabels:
                   gateway.envoyproxy.io/owning-gateway-name: langsmith-gateway
         container:
+          # From your ECR. Without it, this EnvoyProxy replaces the chart's global.images.envoyProxy
+          # and the pods pull the controller's built-in docker.io image.
+          image: "${IMAGE_BASE}/envoyproxy/envoy:${ENVOY_PROXY_IMAGE_TAG}"
           resources:
             requests: { cpu: 250m, memory: 256Mi }
             limits: { memory: 1Gi }

@@ -8,12 +8,14 @@
 // HOW   AWS::Route53::HostedZone with VPCs. The TLS certificate is not created here: give an
 //       ISSUED ACM certificate ARN in config, importing PEM files with post-deploy/00 first
 //       (CloudFormation cannot import a certificate).
+//       Deleted by `cdk destroy` whatever dataRemovalPolicy says: it holds no data, and a kept zone
+//       stays associated with the VPC, so a redeploy into the same VPC fails (ConflictingDomainExists).
 // =============================================================================
 import { aws_ec2 as ec2, aws_route53 as route53, RemovalPolicy } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import { LangSmithConfig } from '../config';
 
-export interface PrivateDnsProps { cfg: LangSmithConfig; vpc: ec2.IVpc; removalPolicy: RemovalPolicy }
+export interface PrivateDnsProps { cfg: LangSmithConfig; vpc: ec2.IVpc }
 
 export class PrivateDns extends Construct {
   public readonly zoneId: string;
@@ -25,7 +27,7 @@ export class PrivateDns extends Construct {
       vpc: props.vpc,
       comment: `LangSmith ${props.cfg.name}`,
     });
-    zone.applyRemovalPolicy(props.removalPolicy);
+    zone.applyRemovalPolicy(RemovalPolicy.DESTROY);
     this.zoneId = zone.hostedZoneId;
   }
 }

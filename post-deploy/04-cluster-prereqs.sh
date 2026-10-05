@@ -241,7 +241,7 @@ step_platform() {
 render_envoy_gateway() {
   if [ "$INGRESS_MODE" = envoy-gateway ]; then
     render helm/envoy-gateway.yaml "$OUT_DIR/envoy-gateway.yaml" IMAGE_BASE ENVOY_GATEWAY_CHART_VERSION ENVOY_PROXY_IMAGE_TAG
-    render k8s/envoy-gateway-resources.yaml "$OUT_DIR/envoy-gateway-resources.yaml" NS
+    render k8s/envoy-gateway-resources.yaml "$OUT_DIR/envoy-gateway-resources.yaml" NS IMAGE_BASE ENVOY_PROXY_IMAGE_TAG
   else
     rm -f "$OUT_DIR/envoy-gateway.yaml" "$OUT_DIR/envoy-gateway-resources.yaml"
   fi
@@ -405,11 +405,17 @@ render_db_bootstrap() {
     cat "$TMP/db-bootstrap-job.yaml"
   } > "$OUT_DIR/db-bootstrap.yaml"
 }
+remove_db_admin() {
+  kubectl -n "$NS" delete externalsecret langsmith-db-admin --ignore-not-found >/dev/null || true
+  kubectl -n "$NS" delete secret langsmith-db-admin --ignore-not-found >/dev/null || true
+}
 step_db_bootstrap() {
   section "8 Database bootstrap Job"
   local rc=0
   need_kubeconfig
   render_db_bootstrap
+  # The master credentials leave the cluster whatever the outcome: also on an error or Ctrl-C.
+  trap 'remove_db_admin; rm -rf "$TMP"' EXIT
   kubectl apply -f "$OUT_DIR/db-admin-externalsecret.yaml"
   kubectl -n "$NS" wait --for=condition=Ready externalsecret/langsmith-db-admin --timeout=180s || rc=$?
   if [ $rc -eq 0 ]; then
@@ -418,9 +424,8 @@ step_db_bootstrap() {
     wait_job "$NS" langsmith-db-bootstrap 900 || rc=$?   # returns at once if the Job fails
     kubectl -n "$NS" logs job/langsmith-db-bootstrap --tail=50 >&2 || true
   fi
-  # The master credentials leave the cluster whatever the outcome.
-  kubectl -n "$NS" delete externalsecret langsmith-db-admin --ignore-not-found >/dev/null
-  kubectl -n "$NS" delete secret langsmith-db-admin --ignore-not-found >/dev/null
+  remove_db_admin
+  trap 'rm -rf "$TMP"' EXIT
   [ $rc -eq 0 ] || die "database bootstrap failed (log above; or: kubectl -n $NS describe externalsecret langsmith-db-admin). Fix, then re-run: ./post-deploy/04-cluster-prereqs.sh db-bootstrap"
   kubectl -n "$NS" delete job/langsmith-db-bootstrap configmap/langsmith-db-bootstrap --ignore-not-found >/dev/null
   log "roles and databases ready; master credentials removed from the cluster"

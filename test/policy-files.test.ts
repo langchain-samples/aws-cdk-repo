@@ -26,9 +26,14 @@ describe.each(files)('%s', (file) => {
     for (const st of doc.Statement) expect(st.Sid).toMatch(/^[A-Za-z0-9]+$/);
   });
 
-  test('uses only the ${ACCOUNT_ID}, ${AWS_REGION} and ${NAME} placeholders', () => {
+  test('uses only the ${AWS_PARTITION}, ${ACCOUNT_ID}, ${AWS_REGION} and ${NAME} placeholders', () => {
     const placeholders = new Set(text.match(/\$\{[A-Z_]+\}/g) ?? []);
-    for (const p of placeholders) expect(['${ACCOUNT_ID}', '${AWS_REGION}', '${NAME}']).toContain(p);
+    for (const p of placeholders) expect(['${AWS_PARTITION}', '${ACCOUNT_ID}', '${AWS_REGION}', '${NAME}']).toContain(p);
+  });
+
+  // GovCloud (aws-us-gov) and China (aws-cn) ARNs do not start with arn:aws:.
+  test('writes every ARN with the ${AWS_PARTITION} placeholder', () => {
+    expect(text).not.toMatch(/"arn:aws[:-]/);
   });
 
   test('fits in a customer-managed policy (6,144 characters without whitespace)', () => {
@@ -43,8 +48,8 @@ test('the execution policies let CloudFormation read the SSM parameters the temp
   const st = doc.Statement.find((s: { Sid: string }) => s.Sid === 'ReadSsmParametersInTemplates');
   expect(st.Action).toContain('ssm:GetParameters');
   expect(st.Resource).toEqual(expect.arrayContaining([
-    'arn:aws:ssm:${AWS_REGION}:${ACCOUNT_ID}:parameter/cdk-bootstrap/*',
-    'arn:aws:ssm:${AWS_REGION}::parameter/aws/service/ami-amazon-linux-latest/*',
+    'arn:${AWS_PARTITION}:ssm:${AWS_REGION}:${ACCOUNT_ID}:parameter/cdk-bootstrap/*',
+    'arn:${AWS_PARTITION}:ssm:${AWS_REGION}::parameter/aws/service/ami-amazon-linux-latest/*',
   ]));
 });
 
@@ -53,7 +58,7 @@ test('the execution policies let CloudFormation read the SSM parameters the temp
 test('the execution policies let CloudFormation read the network stack outputs', () => {
   const doc = JSON.parse(fs.readFileSync(path.join(dir, 'cdk-execution-policy-1-network-compute.json'), 'utf8'));
   const st = doc.Statement.find((s: { Sid: string }) => s.Sid === 'ReadNetworkStackOutputs');
-  expect(st).toMatchObject({ Action: 'cloudformation:DescribeStacks', Resource: 'arn:aws:cloudformation:${AWS_REGION}:${ACCOUNT_ID}:stack/${NAME}-network/*' });
+  expect(st).toMatchObject({ Action: 'cloudformation:DescribeStacks', Resource: 'arn:${AWS_PARTITION}:cloudformation:${AWS_REGION}:${ACCOUNT_ID}:stack/${NAME}-network/*' });
 });
 
 // Found on the first live deploy: AWS::RDS::DBParameterGroup reads the engine defaults first.
@@ -61,6 +66,23 @@ test('the execution policies let CloudFormation read RDS engine defaults', () =>
   const doc = JSON.parse(fs.readFileSync(path.join(dir, 'cdk-execution-policy-2-data.json'), 'utf8'));
   const st = doc.Statement.find((s: { Sid: string }) => s.Sid === 'RdsEngineDefaultsReadOnly');
   expect(st.Action).toContain('rds:DescribeEngineDefaultParameters');
+});
+
+// rds:CreateDBInstance is also authorized against the default option group the instance joins.
+test('the execution policies let CloudFormation use the default Postgres option group', () => {
+  const doc = JSON.parse(fs.readFileSync(path.join(dir, 'cdk-execution-policy-2-data.json'), 'utf8'));
+  const st = doc.Statement.find((s: { Sid: string }) => s.Sid === 'RdsDefaultOptionGroup');
+  expect(st).toMatchObject({
+    Action: ['rds:CreateDBInstance', 'rds:ModifyDBInstance'],
+    Resource: 'arn:${AWS_PARTITION}:rds:${AWS_REGION}:${ACCOUNT_ID}:og:default:postgres-*',
+  });
+});
+
+// The replication group joins default.valkey<major> (lib/components/valkey.ts), which follows engineVersion.
+test('the execution policies allow the default Valkey parameter group of any major version', () => {
+  const doc = JSON.parse(fs.readFileSync(path.join(dir, 'cdk-execution-policy-2-data.json'), 'utf8'));
+  const st = doc.Statement.find((s: { Sid: string }) => s.Sid === 'ElastiCacheForThisInstall');
+  expect(st.Resource).toContain('arn:${AWS_PARTITION}:elasticache:${AWS_REGION}:${ACCOUNT_ID}:parametergroup:default.valkey*');
 });
 
 // Found on the first live deploy: updating AWS::IAM::ManagedPolicy (the <name>-lbc policy) lists
@@ -78,7 +100,7 @@ test('the IAM execution policy has the reads CloudFormation needs to update and 
 test('the execution policies let AWS services check their service-linked roles', () => {
   const doc = JSON.parse(fs.readFileSync(path.join(dir, 'cdk-execution-policy-1-network-compute.json'), 'utf8'));
   const st = doc.Statement.find((s: { Sid: string }) => s.Sid === 'CheckServiceLinkedRolesExist');
-  expect(st).toMatchObject({ Action: 'iam:GetRole', Resource: 'arn:aws:iam::${ACCOUNT_ID}:role/aws-service-role/*' });
+  expect(st).toMatchObject({ Action: 'iam:GetRole', Resource: 'arn:${AWS_PARTITION}:iam::${ACCOUNT_ID}:role/aws-service-role/*' });
 });
 
 // Found on the first live deploy: the AWS::Route53::HostedZone handler reads the zone's query logging.
@@ -109,9 +131,9 @@ test('the execution policies let CloudFormation create the internal ALB, scoped 
   const names = namesFor(loadConfig('example'));
   expect([names.alb, names.envoyTargetGroup]).toEqual(['langsmith-dev-alb', 'langsmith-dev-envoy']);
   expect(st.Resource).toEqual([
-    'arn:aws:elasticloadbalancing:${AWS_REGION}:${ACCOUNT_ID}:loadbalancer/app/${NAME}-alb/*',
-    'arn:aws:elasticloadbalancing:${AWS_REGION}:${ACCOUNT_ID}:targetgroup/${NAME}-envoy/*',
-    'arn:aws:elasticloadbalancing:${AWS_REGION}:${ACCOUNT_ID}:listener/app/${NAME}-alb/*',
+    'arn:${AWS_PARTITION}:elasticloadbalancing:${AWS_REGION}:${ACCOUNT_ID}:loadbalancer/app/${NAME}-alb/*',
+    'arn:${AWS_PARTITION}:elasticloadbalancing:${AWS_REGION}:${ACCOUNT_ID}:targetgroup/${NAME}-envoy/*',
+    'arn:${AWS_PARTITION}:elasticloadbalancing:${AWS_REGION}:${ACCOUNT_ID}:listener/app/${NAME}-alb/*',
   ]);
   const discovery = doc.Statement.find((s: { Sid: string }) => s.Sid === 'ReadOnlyDiscovery');
   expect(discovery.Action).toContain('elasticloadbalancing:Describe*');

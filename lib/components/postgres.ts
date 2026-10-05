@@ -100,6 +100,7 @@ export class Postgres extends Construct {
       copyTagsToSnapshot: true,
       deletionProtection: sizes.deletionProtection,
       autoMinorVersionUpgrade: true,
+      allowMajorVersionUpgrade: true, // RDS rejects an engineVersion major bump without it
     });
     db.applyRemovalPolicy(props.removalPolicy);
 

@@ -134,11 +134,11 @@
         "eks:ListUpdates"
       ],
       "Resource": [
-        "arn:aws:eks:${AWS_REGION}:${ACCOUNT_ID}:cluster/${NAME}",
-        "arn:aws:eks:${AWS_REGION}:${ACCOUNT_ID}:nodegroup/${NAME}/*",
-        "arn:aws:eks:${AWS_REGION}:${ACCOUNT_ID}:addon/${NAME}/*",
-        "arn:aws:eks:${AWS_REGION}:${ACCOUNT_ID}:access-entry/${NAME}/*",
-        "arn:aws:eks:${AWS_REGION}:${ACCOUNT_ID}:podidentityassociation/${NAME}/*"
+        "arn:${AWS_PARTITION}:eks:${AWS_REGION}:${ACCOUNT_ID}:cluster/${NAME}",
+        "arn:${AWS_PARTITION}:eks:${AWS_REGION}:${ACCOUNT_ID}:nodegroup/${NAME}/*",
+        "arn:${AWS_PARTITION}:eks:${AWS_REGION}:${ACCOUNT_ID}:addon/${NAME}/*",
+        "arn:${AWS_PARTITION}:eks:${AWS_REGION}:${ACCOUNT_ID}:access-entry/${NAME}/*",
+        "arn:${AWS_PARTITION}:eks:${AWS_REGION}:${ACCOUNT_ID}:podidentityassociation/${NAME}/*"
       ]
     },
     {
@@ -166,8 +166,8 @@
         "logs:ListTagsLogGroup"
       ],
       "Resource": [
-        "arn:aws:logs:${AWS_REGION}:${ACCOUNT_ID}:log-group:/aws/eks/${NAME}/cluster",
-        "arn:aws:logs:${AWS_REGION}:${ACCOUNT_ID}:log-group:/aws/eks/${NAME}/cluster:*"
+        "arn:${AWS_PARTITION}:logs:${AWS_REGION}:${ACCOUNT_ID}:log-group:/aws/eks/${NAME}/cluster",
+        "arn:${AWS_PARTITION}:logs:${AWS_REGION}:${ACCOUNT_ID}:log-group:/aws/eks/${NAME}/cluster:*"
       ]
     },
     {
@@ -190,16 +190,16 @@
         "elasticloadbalancing:RemoveTags"
       ],
       "Resource": [
-        "arn:aws:elasticloadbalancing:${AWS_REGION}:${ACCOUNT_ID}:loadbalancer/app/${NAME}-alb/*",
-        "arn:aws:elasticloadbalancing:${AWS_REGION}:${ACCOUNT_ID}:targetgroup/${NAME}-envoy/*",
-        "arn:aws:elasticloadbalancing:${AWS_REGION}:${ACCOUNT_ID}:listener/app/${NAME}-alb/*"
+        "arn:${AWS_PARTITION}:elasticloadbalancing:${AWS_REGION}:${ACCOUNT_ID}:loadbalancer/app/${NAME}-alb/*",
+        "arn:${AWS_PARTITION}:elasticloadbalancing:${AWS_REGION}:${ACCOUNT_ID}:targetgroup/${NAME}-envoy/*",
+        "arn:${AWS_PARTITION}:elasticloadbalancing:${AWS_REGION}:${ACCOUNT_ID}:listener/app/${NAME}-alb/*"
       ]
     },
     {
       "Sid": "ReadNetworkStackOutputs",
       "Effect": "Allow",
       "Action": "cloudformation:DescribeStacks",
-      "Resource": "arn:aws:cloudformation:${AWS_REGION}:${ACCOUNT_ID}:stack/${NAME}-network/*"
+      "Resource": "arn:${AWS_PARTITION}:cloudformation:${AWS_REGION}:${ACCOUNT_ID}:stack/${NAME}-network/*"
     },
     {
       "Sid": "ReadSsmParametersInTemplates",
@@ -209,8 +209,8 @@
         "ssm:GetParameter"
       ],
       "Resource": [
-        "arn:aws:ssm:${AWS_REGION}:${ACCOUNT_ID}:parameter/cdk-bootstrap/*",
-        "arn:aws:ssm:${AWS_REGION}::parameter/aws/service/ami-amazon-linux-latest/*"
+        "arn:${AWS_PARTITION}:ssm:${AWS_REGION}:${ACCOUNT_ID}:parameter/cdk-bootstrap/*",
+        "arn:${AWS_PARTITION}:ssm:${AWS_REGION}::parameter/aws/service/ami-amazon-linux-latest/*"
       ]
     },
     {
@@ -225,13 +225,13 @@
       "Action": [
         "iam:PassRole"
       ],
-      "Resource": "arn:aws:iam::${ACCOUNT_ID}:role/${NAME}-*"
+      "Resource": "arn:${AWS_PARTITION}:iam::${ACCOUNT_ID}:role/${NAME}-*"
     },
     {
       "Sid": "CheckServiceLinkedRolesExist",
       "Effect": "Allow",
       "Action": "iam:GetRole",
-      "Resource": "arn:aws:iam::${ACCOUNT_ID}:role/aws-service-role/*"
+      "Resource": "arn:${AWS_PARTITION}:iam::${ACCOUNT_ID}:role/aws-service-role/*"
     },
     {
       "Sid": "ServiceLinkedRolesFirstUseInAccount",

@@ -23,7 +23,8 @@ export function validateConfig(cfg: LangSmithConfig): void {
   const existing = cfg.existingRoles;
 
   // ---- basics
-  need(/^[a-z][a-z0-9-]{0,19}$/.test(cfg.name), `name "${cfg.name}": use lowercase letters, digits and '-', start with a letter, max 20 characters.`);
+  need(/^[a-z][a-z0-9-]{0,19}$/.test(cfg.name) && !cfg.name.endsWith('-') && !cfg.name.includes('--'),
+    `name "${cfg.name}": use lowercase letters, digits and '-', start with a letter, no '--' or trailing '-', max 20 characters.`);
   need(/^\d{12}$/.test(cfg.account), `account "${cfg.account}": must be the 12-digit AWS account ID.`);
   need(/^[a-z]{2}(-[a-z]+)+-\d$/.test(cfg.region), `region "${cfg.region}": must look like us-east-1.`);
   need(['irsa', 'podIdentity'].includes(cfg.workloadIdentity), `workloadIdentity must be 'irsa' or 'podIdentity'.`);
@@ -37,8 +38,9 @@ export function validateConfig(cfg: LangSmithConfig): void {
     const z = resolveSizes(cfg);
     need(z.nodeMin <= z.nodeDesired && z.nodeDesired <= z.nodeMax,
       `sizes: node counts must be nodeMin <= nodeDesired <= nodeMax (now ${z.nodeMin}, ${z.nodeDesired}, ${z.nodeMax}).`);
-    need(z.pgStorageGib <= z.pgMaxStorageGib,
-      `sizes: pgStorageGib (${z.pgStorageGib}) must not exceed pgMaxStorageGib (${z.pgMaxStorageGib}).`);
+    // RDS storage autoscaling: the maximum must be at least 10% above the allocated storage.
+    need(z.pgMaxStorageGib >= Math.ceil(z.pgStorageGib * 1.1),
+      `sizes: pgStorageGib (${z.pgStorageGib}) needs pgMaxStorageGib of at least ${Math.ceil(z.pgStorageGib * 1.1)} (10% more), not ${z.pgMaxStorageGib}.`);
   }
   need(cfg.sizes?.smithdbTier === undefined || ['small', 'medium'].includes(cfg.sizes.smithdbTier),
     `sizes.smithdbTier "${cfg.sizes?.smithdbTier}": use 'small' or 'medium' ('large' needs local NVMe nodes, README.md, Sizing).`);
@@ -140,6 +142,8 @@ export function validateConfig(cfg: LangSmithConfig): void {
   need(!(cfg.postgres.core.enabled && cfg.postgres.core.existing), 'postgres.core: set enabled = true or existing, not both.');
   need(!(cfg.postgres.metastore.enabled && cfg.postgres.metastore.existing), 'postgres.metastore: set enabled = true or existing, not both.');
   need(!(cfg.valkey.enabled && cfg.valkey.existing), 'valkey: set enabled = true or existing, not both.');
+  need(!(cfg.s3.blob.enabled && cfg.s3.blob.existingBucketName), 's3.blob: set enabled = true or existingBucketName, not both.');
+  need(!(cfg.s3.smithdb.enabled && cfg.s3.smithdb.existingBucketName), 's3.smithdb: set enabled = true or existingBucketName, not both.');
   if (roles.langsmith) {
     need(blob, 'workloadRoles.langsmith needs the blob bucket: s3.blob.enabled = true or s3.blob.existingBucketName.');
     need(coreDb, 'workloadRoles.langsmith needs the core database: postgres.core.enabled = true or postgres.core.existing.');

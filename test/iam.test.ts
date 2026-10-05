@@ -206,6 +206,15 @@ describe('IAM pack (npm run iam-pack)', () => {
     expect(JSON.stringify(pack.roles)).not.toContain('arn:aws:');
   });
 
+  test('GovCloud: roles and the Load Balancer Controller policy use arn:aws-us-gov', () => {
+    const cfg = loadConfig('examples/podidentity-dev');
+    cfg.region = 'us-gov-west-1';
+    const pack = buildIamPack(cfg);
+    const text = JSON.stringify([pack.roles, pack.managedPolicies]);
+    expect(text).toContain('arn:aws-us-gov:');
+    expect(text).not.toContain('arn:aws:');
+  });
+
   // README.md, Appendix C lists every permission by hand: this fails when a policy changes and the README does not.
   test('README.md, Appendix C lists every role, managed policy, statement and action', () => {
     const readme = fs.readFileSync(path.join(__dirname, '..', 'README.md'), 'utf8');

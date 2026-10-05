@@ -45,9 +45,9 @@
         "iam:UntagInstanceProfile"
       ],
       "Resource": [
-        "arn:aws:iam::${ACCOUNT_ID}:role/${NAME}-*",
-        "arn:aws:iam::${ACCOUNT_ID}:policy/${NAME}-*",
-        "arn:aws:iam::${ACCOUNT_ID}:instance-profile/${NAME}-*"
+        "arn:${AWS_PARTITION}:iam::${ACCOUNT_ID}:role/${NAME}-*",
+        "arn:${AWS_PARTITION}:iam::${ACCOUNT_ID}:policy/${NAME}-*",
+        "arn:${AWS_PARTITION}:iam::${ACCOUNT_ID}:instance-profile/${NAME}-*"
       ]
     },
     {
@@ -57,7 +57,7 @@
         "iam:CreateOpenIDConnectProvider",
         "iam:TagOpenIDConnectProvider"
       ],
-      "Resource": "arn:aws:iam::${ACCOUNT_ID}:oidc-provider/oidc.eks.${AWS_REGION}.amazonaws.com/id/*",
+      "Resource": "arn:${AWS_PARTITION}:iam::${ACCOUNT_ID}:oidc-provider/oidc.eks.${AWS_REGION}.amazonaws.com/id/*",
       "Condition": {
         "StringEquals": {
           "aws:RequestTag/langsmith-env": "${NAME}"
@@ -74,7 +74,7 @@
         "iam:UpdateOpenIDConnectProviderThumbprint",
         "iam:AddClientIDToOpenIDConnectProvider"
       ],
-      "Resource": "arn:aws:iam::${ACCOUNT_ID}:oidc-provider/oidc.eks.${AWS_REGION}.amazonaws.com/id/*",
+      "Resource": "arn:${AWS_PARTITION}:iam::${ACCOUNT_ID}:oidc-provider/oidc.eks.${AWS_REGION}.amazonaws.com/id/*",
       "Condition": {
         "StringEquals": {
           "aws:ResourceTag/langsmith-env": "${NAME}"
@@ -88,7 +88,7 @@
         "iam:GetOpenIDConnectProvider",
         "iam:ListOpenIDConnectProviderTags"
       ],
-      "Resource": "arn:aws:iam::${ACCOUNT_ID}:oidc-provider/oidc.eks.${AWS_REGION}.amazonaws.com/id/*"
+      "Resource": "arn:${AWS_PARTITION}:iam::${ACCOUNT_ID}:oidc-provider/oidc.eks.${AWS_REGION}.amazonaws.com/id/*"
     }
   ]
 }

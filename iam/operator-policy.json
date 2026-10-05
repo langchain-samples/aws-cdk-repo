@@ -20,7 +20,7 @@
       "Action": [
         "eks:DescribeCluster"
       ],
-      "Resource": "arn:aws:eks:${AWS_REGION}:${ACCOUNT_ID}:cluster/${NAME}"
+      "Resource": "arn:${AWS_PARTITION}:eks:${AWS_REGION}:${ACCOUNT_ID}:cluster/${NAME}"
     },
     {
       "Sid": "ReadSeededSecretsAndAdminLogin",
@@ -30,10 +30,10 @@
         "secretsmanager:GetSecretValue"
       ],
       "Resource": [
-        "arn:aws:secretsmanager:${AWS_REGION}:${ACCOUNT_ID}:secret:${NAME}/license-key-*",
-        "arn:aws:secretsmanager:${AWS_REGION}:${ACCOUNT_ID}:secret:${NAME}/fernet/*",
-        "arn:aws:secretsmanager:${AWS_REGION}:${ACCOUNT_ID}:secret:${NAME}/initial-org-admin-password-*",
-        "arn:aws:secretsmanager:${AWS_REGION}:${ACCOUNT_ID}:secret:${NAME}/initial-org-admin-email-*"
+        "arn:${AWS_PARTITION}:secretsmanager:${AWS_REGION}:${ACCOUNT_ID}:secret:${NAME}/license-key-*",
+        "arn:${AWS_PARTITION}:secretsmanager:${AWS_REGION}:${ACCOUNT_ID}:secret:${NAME}/fernet/*",
+        "arn:${AWS_PARTITION}:secretsmanager:${AWS_REGION}:${ACCOUNT_ID}:secret:${NAME}/initial-org-admin-password-*",
+        "arn:${AWS_PARTITION}:secretsmanager:${AWS_REGION}:${ACCOUNT_ID}:secret:${NAME}/initial-org-admin-email-*"
       ]
     },
     {
@@ -43,8 +43,8 @@
         "secretsmanager:PutSecretValue"
       ],
       "Resource": [
-        "arn:aws:secretsmanager:${AWS_REGION}:${ACCOUNT_ID}:secret:${NAME}/license-key-*",
-        "arn:aws:secretsmanager:${AWS_REGION}:${ACCOUNT_ID}:secret:${NAME}/fernet/*"
+        "arn:${AWS_PARTITION}:secretsmanager:${AWS_REGION}:${ACCOUNT_ID}:secret:${NAME}/license-key-*",
+        "arn:${AWS_PARTITION}:secretsmanager:${AWS_REGION}:${ACCOUNT_ID}:secret:${NAME}/fernet/*"
       ]
     },
     {
@@ -63,7 +63,7 @@
         "ecr:BatchGetImage",
         "ecr:GetDownloadUrlForLayer"
       ],
-      "Resource": "arn:aws:ecr:${AWS_REGION}:${ACCOUNT_ID}:repository/${NAME}/*"
+      "Resource": "arn:${AWS_PARTITION}:ecr:${AWS_REGION}:${ACCOUNT_ID}:repository/${NAME}/*"
     },
     {
       "Sid": "ImportNewCertificateTaggedForThisInstall",
@@ -72,7 +72,7 @@
         "acm:ImportCertificate",
         "acm:AddTagsToCertificate"
       ],
-      "Resource": "arn:aws:acm:${AWS_REGION}:${ACCOUNT_ID}:certificate/*",
+      "Resource": "arn:${AWS_PARTITION}:acm:${AWS_REGION}:${ACCOUNT_ID}:certificate/*",
       "Condition": {
         "StringEquals": {
           "aws:RequestTag/langsmith-env": "${NAME}"
@@ -86,7 +86,7 @@
         "acm:ImportCertificate",
         "acm:AddTagsToCertificate"
       ],
-      "Resource": "arn:aws:acm:${AWS_REGION}:${ACCOUNT_ID}:certificate/*",
+      "Resource": "arn:${AWS_PARTITION}:acm:${AWS_REGION}:${ACCOUNT_ID}:certificate/*",
       "Condition": {
         "StringEquals": {
           "aws:ResourceTag/langsmith-env": "${NAME}"
@@ -99,7 +99,7 @@
       "Action": [
         "acm:DescribeCertificate"
       ],
-      "Resource": "arn:aws:acm:${AWS_REGION}:${ACCOUNT_ID}:certificate/*"
+      "Resource": "arn:${AWS_PARTITION}:acm:${AWS_REGION}:${ACCOUNT_ID}:certificate/*"
     },
     {
       "Sid": "DnsRecordForTheAlb",
@@ -111,8 +111,8 @@
         "route53:GetChange"
       ],
       "Resource": [
-        "arn:aws:route53:::hostedzone/*",
-        "arn:aws:route53:::change/*"
+        "arn:${AWS_PARTITION}:route53:::hostedzone/*",
+        "arn:${AWS_PARTITION}:route53:::change/*"
       ]
     }
   ]

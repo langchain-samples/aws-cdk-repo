@@ -31,7 +31,7 @@ done
 
 section "3 shellcheck"
 if command -v shellcheck >/dev/null 2>&1; then
-  shellcheck -x post-deploy/*.sh tools/*.sh && echo "  ok" >&2
+  shellcheck -x post-deploy/*.sh tools/*.sh k8s/db-bootstrap/bootstrap.sh && echo "  ok" >&2
 else
   echo "  shellcheck not installed: skipped" >&2
 fi

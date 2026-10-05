@@ -1,3 +1,4 @@
+# shellcheck shell=sh
 # k8s/db-bootstrap/bootstrap.sh — run by the database bootstrap Job (post-deploy/04 step 8) with psql.
 # The connection settings come from the temporary Secret langsmith-db-admin (k8s/db-admin-externalsecret.yaml):
 # the RDS master users, over TLS. Each SQL file is idempotent, so the Job is safe to re-run.

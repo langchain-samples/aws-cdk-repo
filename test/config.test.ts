@@ -18,6 +18,16 @@ describe('validation rules', () => {
     const cfg = base();
     cfg.name = 'My_LangSmith_Install_Name';
     expect(() => validateConfig(cfg)).toThrow(/name "My_LangSmith_Install_Name"/);
+    for (const name of ['ls-', 'ls--dev']) { // RDS identifiers reject a trailing or double hyphen
+      cfg.name = name;
+      expect(() => validateConfig(cfg)).toThrow(new RegExp(`name "${name}"`));
+    }
+  });
+
+  test('a bucket is created or brought, not both', () => {
+    const cfg = base();
+    cfg.s3.blob = { enabled: true, existingBucketName: 'mine-blob' };
+    expect(() => validateConfig(cfg)).toThrow(/s3.blob: set enabled = true or existingBucketName, not both/);
   });
 
   test('own VPC needs subnets in 2 AZs', () => {
@@ -287,6 +297,10 @@ describe('more validation rules', () => {
     expect(() => validateConfig(cfg)).toThrow(/nodeMin <= nodeDesired <= nodeMax/);
     cfg.sizes = { pgStorageGib: 600, pgMaxStorageGib: 500 };
     expect(() => validateConfig(cfg)).toThrow(/pgStorageGib .* pgMaxStorageGib/);
+    cfg.sizes = { pgStorageGib: 500, pgMaxStorageGib: 540 }; // RDS wants at least 10% headroom
+    expect(() => validateConfig(cfg)).toThrow(/pgMaxStorageGib of at least 550/);
+    cfg.sizes = { pgStorageGib: 500, pgMaxStorageGib: 550 };
+    expect(() => validateConfig(cfg)).not.toThrow();
   });
 
   test('your pod subnets must cover every AZ of your private subnets', () => {

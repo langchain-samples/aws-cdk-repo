@@ -75,7 +75,7 @@
         "s3:GetLifecycleConfiguration",
         "s3:PutLifecycleConfiguration"
       ],
-      "Resource": "arn:aws:s3:::${NAME}-*"
+      "Resource": "arn:${AWS_PARTITION}:s3:::${NAME}-*"
     },
     {
       "Sid": "SecretsUnderThisInstallPrefix",
@@ -89,7 +89,7 @@
         "secretsmanager:TagResource",
         "secretsmanager:UntagResource"
       ],
-      "Resource": "arn:aws:secretsmanager:${AWS_REGION}:${ACCOUNT_ID}:secret:${NAME}/*"
+      "Resource": "arn:${AWS_PARTITION}:secretsmanager:${AWS_REGION}:${ACCOUNT_ID}:secret:${NAME}/*"
     },
     {
       "Sid": "RdsManagedMasterPasswordSecrets",
@@ -98,7 +98,7 @@
         "secretsmanager:CreateSecret",
         "secretsmanager:TagResource"
       ],
-      "Resource": "arn:aws:secretsmanager:${AWS_REGION}:${ACCOUNT_ID}:secret:rds!*"
+      "Resource": "arn:${AWS_PARTITION}:secretsmanager:${AWS_REGION}:${ACCOUNT_ID}:secret:rds!*"
     },
     {
       "Sid": "RdsInstancesForThisInstall",
@@ -123,11 +123,20 @@
         "rds:ListTagsForResource"
       ],
       "Resource": [
-        "arn:aws:rds:${AWS_REGION}:${ACCOUNT_ID}:db:${NAME}-*",
-        "arn:aws:rds:${AWS_REGION}:${ACCOUNT_ID}:subgrp:${NAME}-*",
-        "arn:aws:rds:${AWS_REGION}:${ACCOUNT_ID}:pg:${NAME}-*",
-        "arn:aws:rds:${AWS_REGION}:${ACCOUNT_ID}:snapshot:${NAME}-*"
+        "arn:${AWS_PARTITION}:rds:${AWS_REGION}:${ACCOUNT_ID}:db:${NAME}-*",
+        "arn:${AWS_PARTITION}:rds:${AWS_REGION}:${ACCOUNT_ID}:subgrp:${NAME}-*",
+        "arn:${AWS_PARTITION}:rds:${AWS_REGION}:${ACCOUNT_ID}:pg:${NAME}-*",
+        "arn:${AWS_PARTITION}:rds:${AWS_REGION}:${ACCOUNT_ID}:snapshot:${NAME}-*"
       ]
+    },
+    {
+      "Sid": "RdsDefaultOptionGroup",
+      "Effect": "Allow",
+      "Action": [
+        "rds:CreateDBInstance",
+        "rds:ModifyDBInstance"
+      ],
+      "Resource": "arn:${AWS_PARTITION}:rds:${AWS_REGION}:${ACCOUNT_ID}:og:default:postgres-*"
     },
     {
       "Sid": "RdsEngineDefaultsReadOnly",
@@ -166,13 +175,13 @@
         "elasticache:ListTagsForResource"
       ],
       "Resource": [
-        "arn:aws:elasticache:${AWS_REGION}:${ACCOUNT_ID}:subnetgroup:${NAME}-*",
-        "arn:aws:elasticache:${AWS_REGION}:${ACCOUNT_ID}:user:${NAME}-*",
-        "arn:aws:elasticache:${AWS_REGION}:${ACCOUNT_ID}:usergroup:${NAME}",
-        "arn:aws:elasticache:${AWS_REGION}:${ACCOUNT_ID}:replicationgroup:${NAME}",
-        "arn:aws:elasticache:${AWS_REGION}:${ACCOUNT_ID}:cluster:${NAME}-*",
-        "arn:aws:elasticache:${AWS_REGION}:${ACCOUNT_ID}:snapshot:${NAME}-*",
-        "arn:aws:elasticache:${AWS_REGION}:${ACCOUNT_ID}:parametergroup:default.valkey8"
+        "arn:${AWS_PARTITION}:elasticache:${AWS_REGION}:${ACCOUNT_ID}:subnetgroup:${NAME}-*",
+        "arn:${AWS_PARTITION}:elasticache:${AWS_REGION}:${ACCOUNT_ID}:user:${NAME}-*",
+        "arn:${AWS_PARTITION}:elasticache:${AWS_REGION}:${ACCOUNT_ID}:usergroup:${NAME}",
+        "arn:${AWS_PARTITION}:elasticache:${AWS_REGION}:${ACCOUNT_ID}:replicationgroup:${NAME}",
+        "arn:${AWS_PARTITION}:elasticache:${AWS_REGION}:${ACCOUNT_ID}:cluster:${NAME}-*",
+        "arn:${AWS_PARTITION}:elasticache:${AWS_REGION}:${ACCOUNT_ID}:snapshot:${NAME}-*",
+        "arn:${AWS_PARTITION}:elasticache:${AWS_REGION}:${ACCOUNT_ID}:parametergroup:default.valkey*"
       ]
     },
     {

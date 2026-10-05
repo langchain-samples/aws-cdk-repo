@@ -216,7 +216,10 @@ export function clusterAutoscalerPolicy(clusterName: string) {
  * with the one for the new appVersion.
  */
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-export const loadBalancerControllerPolicy: object = require('./aws-load-balancer-controller-policy.json');
+const loadBalancerControllerPolicyDocument: object = require('./aws-load-balancer-controller-policy.json');
+/** The published policy with its `arn:aws:` ARNs moved to the deployment's partition (GovCloud, China). */
+export const loadBalancerControllerPolicy = (partition: string): object =>
+  JSON.parse(JSON.stringify(loadBalancerControllerPolicyDocument).split('arn:aws:').join(`arn:${partition}:`));
 
 // ---- AWS managed policies used by the roles ------------------------------------------
 export const managed = (partition: string, name: string) => `arn:${partition}:iam::aws:policy/${name}`;

@@ -52,6 +52,8 @@ describe("ingress mode 'envoy-gateway'", () => {
     const values = read('helm', 'envoy-gateway.yaml');
     expect(values).toMatch(/image: "\$\{IMAGE_BASE\}\/envoyproxy\/gateway:\$\{ENVOY_GATEWAY_CHART_VERSION\}"/);
     expect(values).toMatch(/image: "\$\{IMAGE_BASE\}\/envoyproxy\/envoy:\$\{ENVOY_PROXY_IMAGE_TAG\}"/);
+    // The GatewayClass's EnvoyProxy replaces the chart's default proxy settings, image included.
+    expect(resources.EnvoyProxy).toMatch(/container:[\s\S]*image: "\$\{IMAGE_BASE\}\/envoyproxy\/envoy:\$\{ENVOY_PROXY_IMAGE_TAG\}"/);
   });
 });
 
