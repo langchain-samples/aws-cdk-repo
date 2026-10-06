@@ -44,7 +44,7 @@ flowchart LR
 
 | Component | Details |
 |---|---|
-| **VPC** (optional, its own stack) | 3 private subnets, 3 small public subnets for the NAT, 3 pod subnets; or you use your VPC |
+| **VPC** (optional, its own stack) | 3 private subnets, 3 small public subnets for the NAT, 3 pod subnets; or you use your VPC, built beforehand (1.3, "Bringing your own VPC") |
 | **EKS 1.34** | private API endpoint, one managed node group, managed add-ons (VPC CNI, kube-proxy, CoreDNS, EBS CSI driver, metrics-server, Pod Identity agent when used) |
 | **RDS PostgreSQL 16** ("core") and **18** ("metastore", for SmithDB) | IAM authentication and TLS: no database passwords |
 | **ElastiCache Valkey** | IAM authentication and TLS |
@@ -105,8 +105,8 @@ There are three layers, each run by you:
 - **One deploy.** Pods get pod-subnet addresses from the first boot.
 
 **Choosing the pod range.** Agree it with your network team:
-- **Where from:** `100.64.0.0/10` or `198.19.0.0/16`. AWS allows either as a second VPC range.
-- **No overlap:** it must not overlap anything pods need to reach, such as carrier-grade NAT, Zscaler or Tailscale overlays, on-premises networks, or VPCs on the Transit Gateway. If `100.64.0.0/16` is taken, use another /16, such as `198.19.0.0/16`.
+- **Where from:** a /16 inside `100.64.0.0/10`, which AWS lets you add to any VPC. Not `198.19.0.0/16`: AWS refuses it as a second range next to a 10.x, 172.16–31.x or 192.168.x range.
+- **No overlap:** it must not overlap anything pods need to reach, such as carrier-grade NAT, Zscaler or Tailscale overlays, on-premises networks, or VPCs on the Transit Gateway. If `100.64.0.0/16` is taken, use another /16 inside `100.64.0.0/10`, such as `100.65.0.0/16`.
 - **Never advertise it,** in Transit Gateway routes or BGP. Then every VPC can reuse it.
 - **Set it** with `network.podCidr` for a new VPC (a /16; the default is `100.64.0.0/16`), or with `network.podSubnets` and `network.vpcCidrs` for your own VPC. Pin it: changing it replaces the pod subnets.
 
@@ -134,6 +134,130 @@ client → internal ALB :443 (TLS) → Envoy proxy pods :10080 → HTTPRoute →
 - **TLS** ends at the ALB, which uses your ACM certificate (policy `ELBSecurityPolicy-TLS13-1-2-2021-06`, no HTTP listener). From the ALB to Envoy and the pods, traffic is plain HTTP inside the VPC. RDS and Valkey always use TLS.
 - **Outbound.** The cluster needs `beacon.langchain.com:443` (license check) and AWS APIs, through a NAT or VPC endpoints. Images come from your ECR, so nodes never pull from the internet. Appendix B lists every endpoint.
 
+#### Bringing your own VPC
+
+**Build and tag the VPC before Step 1.**
+- CDK adds nothing to your network: no subnets, routes, NAT, endpoints or tags.
+- CDK doesn't check the IDs you give it. A mistake shows up only in `cdk deploy` or in `post-deploy/04`.
+- This path has not yet been run live (Appendix F).
+
+Choose one of the two setups in the table at the top of 1.3, then follow its list from start to finish.
+
+**What a pod range is.** In EKS, every pod takes a real address from the VPC, and LangSmith runs about 50 pods before any agent deployment. A separate pod range gives pods their own addresses from a second range added to the VPC (a *secondary CIDR*), so they don't use your routable addresses. Subnet tags tell the VPC CNI, the EKS add-on that assigns pod addresses, which subnets to use. Traffic leaving the VPC carries the node's address, so the pod range is never routed outside the VPC.
+
+**Setup 1: a separate pod range (recommended)**
+
+```mermaid
+flowchart LR
+  users(["Users"]) -- "HTTPS 443" --> priv
+  subgraph vpc ["VPC: a routable range (e.g. 10.20.0.0/23) + a secondary range for pods (e.g. 100.64.0.0/16)"]
+    subgraph az ["In each AZ: 2 minimum, 3 recommended"]
+      direction TB
+      priv["Private subnet, /25, from the routable range<br/>tag kubernetes.io/role/cni = 0<br/>nodes, RDS, Valkey, ALB, EKS"]
+      pod["Pod subnet, /19, from the secondary range<br/>tag kubernetes.io/role/cni = 1<br/>pods only"]
+    end
+    rt["The AZ's route table, shared by both subnets<br/>0.0.0.0/0 to a NAT gateway or Transit Gateway<br/>+ the S3 gateway endpoint"]
+  end
+  priv & pod -.-> rt
+  rt --> out(["AWS APIs, ECR, beacon.langchain.com"])
+```
+
+| # | Provision | Exactly | Why |
+|---|---|---|---|
+| 1 | **VPC DNS** | DNS resolution **and** DNS hostnames on. DHCP option set `AmazonProvidedDNS`, or DNS servers that forward to the VPC's resolver | The private EKS endpoint, the private zone and the endpoints' DNS names need them |
+| 2 | **Secondary CIDR** on the VPC | A /16 inside `100.64.0.0/10` (e.g. `100.64.0.0/16`) that overlaps nothing pods must reach: on-premises, VPCs on the Transit Gateway, carrier-grade NAT, Zscaler or Tailscale. **Not** `198.19.0.0/16`: AWS refuses it next to 10.x, 172.16–31.x and 192.168.x ranges. Never advertise it in TGW or BGP routes | Pod addresses come from here |
+| 3 | **Private subnets** | One per AZ, at least 2 AZs (3 recommended), from the routable range, **/25** each (minimum /26). Not in the AZ IDs `use1-az3`, `usw1-az2` or `cac1-az3` | Nodes, RDS, Valkey, the internal ALB and the EKS control plane go here |
+| 4 | **Pod subnets** | One per AZ, in the same AZs, from the secondary CIDR, **/19** each (minimum /24 for prod with ~50 agents, /26 for dev) | Pods. The VPC CNI only uses a pod subnet in the node's own AZ |
+| 5 | **Route table per AZ** | `0.0.0.0/0` to a NAT gateway or central egress (Transit Gateway, firewall). Associate it with **both** the AZ's private and pod subnet. With no NAT: the interface endpoints in Appendix B | Nodes pull from ECR, call AWS APIs and the license check. Pod traffic leaves with the node's address |
+| 6 | **S3 gateway endpoint** | On the route tables of step 5 | Free; keeps image layers off the NAT. **Required** with `s3GatewayEndpointId`, where the bucket policy denies S3 access outside it, and with no NAT |
+| 7 | **Tags** | Pod subnets `kubernetes.io/role/cni=1`; private subnets `kubernetes.io/role/cni=0` (commands below) | They put pods in the pod subnets and keep them out of the private ones. `post-deploy/04` step 3 checks them |
+| 8 | **Access** | Your users' networks route to the private subnets. Network ACLs, if any, allow all traffic between the private and pod subnets | The ALB is internal. List those networks in `ingress.allowedCidrs` |
+
+```bash
+aws ec2 create-tags --resources <pod-subnet-a> <pod-subnet-b> <pod-subnet-c> \
+  --tags Key=kubernetes.io/role/cni,Value=1 Key=cni.networking.k8s.aws/cluster/<name>,Value=shared
+aws ec2 create-tags --resources <private-subnet-a> <private-subnet-b> <private-subnet-c> \
+  --tags Key=kubernetes.io/role/cni,Value=0
+```
+
+**About the tags:**
+- `<name>` is the `name` in your config. The `cni.networking.k8s.aws/cluster/<name>` tag is optional: it keeps other clusters in the VPC out of these pod subnets.
+- **`cni=0` applies to every EKS cluster in the VPC.** If other clusters' nodes share these private subnets, give LangSmith its own subnets.
+- Leave the VPC CNI's custom networking (`ENIConfig`) off. It overrides the tags.
+
+```ts
+network: {
+  createVpc: false,
+  vpcId: 'vpc-0123456789abcdef0',
+  vpcCidrs: ['10.20.0.0/23', '100.64.0.0/16'],      // every range, the secondary one included
+  privateSubnets: [
+    { id: 'subnet-0aaaaaaaaaaaaaaaa', az: 'us-east-1a' },
+    { id: 'subnet-0bbbbbbbbbbbbbbbb', az: 'us-east-1b' },
+    { id: 'subnet-0cccccccccccccccc', az: 'us-east-1c' },
+  ],
+  podSubnets: [
+    { id: 'subnet-0dddddddddddddddd', az: 'us-east-1a' },
+    { id: 'subnet-0eeeeeeeeeeeeeeee', az: 'us-east-1b' },
+    { id: 'subnet-0ffffffffffffffff', az: 'us-east-1c' },
+  ],
+  s3GatewayEndpointId: 'vpce-0123456789abcdef0',     // optional (step 6)
+},
+```
+
+**Setup 2: pods in the private subnets**
+
+```mermaid
+flowchart LR
+  users(["Users"]) -- "HTTPS 443" --> priv
+  subgraph vpc ["VPC: a routable range (e.g. 10.20.0.0/21)"]
+    subgraph az ["In each AZ: 2 minimum, 3 recommended"]
+      priv["Private subnet, /23 (dev, stage) or /22 (prod)<br/>no kubernetes.io/role/cni tag<br/>nodes, pods, RDS, Valkey, ALB, EKS"]
+    end
+    rt["The AZ's route table<br/>0.0.0.0/0 to a NAT gateway or Transit Gateway<br/>+ the S3 gateway endpoint"]
+  end
+  priv -.-> rt
+  rt --> out(["AWS APIs, ECR, beacon.langchain.com"])
+```
+
+| # | Provision | Exactly | Why |
+|---|---|---|---|
+| 1 | **VPC DNS** | DNS resolution **and** DNS hostnames on. DHCP option set `AmazonProvidedDNS`, or DNS servers that forward to the VPC's resolver | The private EKS endpoint, the private zone and the endpoints' DNS names need them |
+| 2 | **Private subnets** | One per AZ, at least 2 AZs (3 recommended), **/23** each for dev and stage, **/22** for prod. Not in the AZ IDs `use1-az3`, `usw1-az2` or `cac1-az3` | Every pod takes an address here, next to the nodes, RDS, Valkey, the ALB and the EKS control plane |
+| 3 | **Route table per AZ** | `0.0.0.0/0` to a NAT gateway or central egress (Transit Gateway, firewall). With no NAT: the interface endpoints in Appendix B | Nodes pull from ECR, call AWS APIs and the license check |
+| 4 | **S3 gateway endpoint** | On the route tables of step 3 | Free; keeps image layers off the NAT. **Required** with `s3GatewayEndpointId`, and with no NAT |
+| 5 | **Tags** | **None.** Make sure no `kubernetes.io/role/cni=0` tag is on these subnets | That tag would leave pods without addresses |
+| 6 | **Access** | Your users' networks route to the private subnets | The ALB is internal. List those networks in `ingress.allowedCidrs` |
+
+```ts
+network: {
+  createVpc: false,
+  vpcId: 'vpc-0123456789abcdef0',
+  vpcCidrs: ['10.20.0.0/21'],
+  privateSubnets: [
+    { id: 'subnet-0aaaaaaaaaaaaaaaa', az: 'us-east-1a' },
+    { id: 'subnet-0bbbbbbbbbbbbbbbb', az: 'us-east-1b' },
+    { id: 'subnet-0cccccccccccccccc', az: 'us-east-1c' },
+  ],
+  podSubnets: [],                                    // pods use the private subnets
+  s3GatewayEndpointId: 'vpce-0123456789abcdef0',     // optional (step 4)
+},
+```
+
+**Both setups.**
+- **Not needed:** public subnets (unless your NAT lives in this VPC), an internet gateway (with central egress), and the `kubernetes.io/role/internal-elb` and `kubernetes.io/cluster/<name>` tags.
+- **CDK then creates, in the private subnets:** its security groups, the EKS cluster and nodes, RDS, Valkey, the internal ALB, the private zone (attached to the VPC) and the optional bastion.
+- **Your DNS** forwards the LangSmith zone to the VPC (Step 9).
+
+**Check before Step 1** (read-only). The last command returns nothing for a subnet on the VPC's main route table; check that table instead.
+
+```bash
+aws ec2 describe-vpc-attribute --vpc-id <vpc-id> --attribute enableDnsSupport     # and --attribute enableDnsHostnames
+aws ec2 describe-subnets --subnet-ids <subnet-ids> --output table \
+  --query 'Subnets[].[SubnetId,AvailabilityZone,AvailabilityZoneId,CidrBlock,AvailableIpAddressCount,Tags[?Key==`kubernetes.io/role/cni`]|[0].Value]'
+aws ec2 describe-route-tables --filters Name=association.subnet-id,Values=<subnet-id> --output table \
+  --query 'RouteTables[].Routes[].[DestinationCidrBlock,DestinationPrefixListId,NatGatewayId,TransitGatewayId,GatewayId]'
+```
+
 ### 1.4 Identity and security
 
 **Who deploys.**
@@ -144,7 +268,7 @@ client → internal ALB :443 (TLS) → Envoy proxy pods :10080 → HTTPRoute →
 
 | Identity | Steps | Needs |
 |---|---|---|
-| IAM admin | 2 | rights to create IAM policies and run `cdk bootstrap` (which creates roles) |
+| IAM admin | 2, once per environment | an **IAM administrator** of the account (for example `AdministratorAccess`): Step 2 creates IAM policies and roles, and lets the toolkit create IAM roles |
 | Deployer: a person or CI | 4 (and Part 3) | `sts:AssumeRole` on `arn:<partition>:iam::<account>:role/cdk-<qualifier>-*`, nothing else |
 | Script runner | 3, 5, 6–9 | the policy `<name>-operator-policy` (from `iam/operator-policy.json`) attached to their role, plus cluster-admin access to EKS: their role in `eks.adminRoleArns`, or the bastion's role, which gets both when `bastion.operatorPolicyArn` is set |
 
@@ -256,7 +380,8 @@ Every script after Step 4 reads its inputs from `out/cdk-outputs.json`. So one c
 - [ ] **A TLS certificate for the hostname:** an ISSUED certificate in ACM, or PEM files (certificate, key, chain). A private CA is fine.
 - [ ] **The first admin's email.**
 - [ ] **Cluster admins:** the ARN of each IAM role that may administer the cluster, including the role's path.
-- [ ] **For your own VPC:** its ID and every range, the private subnets (one per AZ), and the pod subnets with their tags (1.3).
+- [ ] **An IAM administrator of the account** for Step 2, once per environment (1.4).
+- [ ] **For your own VPC:** built, tagged and checked **before Step 1** (1.3, "Bringing your own VPC"): its ID and every range, the private subnets (one per AZ), and the pod subnets with their tags.
 - [ ] **A SmithDB ticket** in the [LangChain Support Portal](https://support.langchain.com/). LangChain asks for one for every SmithDB installation, so it can review the setup. Open it before you install; it must be resolved before production, not before these steps.
 
 **Tools.**
@@ -276,7 +401,7 @@ Every script after Step 4 reads its inputs from `out/cdk-outputs.json`. So one c
 
 | Team | Reviews |
 |---|---|
-| Network | 1.3, Appendix B: ranges, routing, ports, outbound access, DNS forwarding |
+| Network | 1.3 (with "Bringing your own VPC" for your own VPC), Appendix B: ranges, routing, ports, outbound access, DNS forwarding |
 | Security / IAM | 1.4, Appendix C and D, and the policies in `iam/` |
 | PKI | the certificate, and how clients trust its CA (Step 9) |
 | Platform | where each step runs (the table above) and who is a cluster admin |
@@ -303,7 +428,9 @@ Keep `config/<env>.ts` in your own repository. It holds IDs and settings, never 
 
 ### Step 2: Create the policies and the CDK toolkit
 
-**Where:** an admin with IAM rights, once per environment.
+**Who:** an **IAM administrator** of the account (for example, a role with `AdministratorAccess`), once per environment.
+- **Why an administrator:** this step creates IAM policies and the toolkit's roles, and attaches policy 3, which lets CloudFormation create IAM roles. Only an identity that may grant that can run it.
+- **After this step, nobody needs admin rights.** The deployer (Step 4) only assumes the toolkit's roles, and the script runner uses the operator policy (1.4, "Three identities").
 
 **Run** (with your values; `NAME` and `QUALIFIER` are `name` and `cdkQualifier` from your config):
 
@@ -692,8 +819,8 @@ Afterwards, `./tools/list-resources.sh <name>` shows what is left (read-only).
 
 **Notes:**
 - **Pin `layout`, and `podCidr` (separate pod range) or `addressPlan` (pods in the private subnets), in your config.** Changing them replaces the VPC or its subnets.
-- **To change the pod range,** set `network.podCidr`, such as `198.19.0.0/16`. To change the other ranges, edit `layoutCidrs` in `lib/stacks/network-stack.ts`.
-- **On your own VPC with a separate pod range,** tag each pod subnet `kubernetes.io/role/cni=1` and each private subnet `kubernetes.io/role/cni=0`. The `=0` tag affects every cluster in that VPC.
+- **To change the pod range,** set `network.podCidr` to another /16 inside `100.64.0.0/10`, such as `100.65.0.0/16`. To change the other ranges, edit `layoutCidrs` in `lib/stacks/network-stack.ts`.
+- **On your own VPC,** see 1.3, "Bringing your own VPC": the requirements, the tags and the checks.
 
 ### C. IAM roles and permissions
 
@@ -869,6 +996,8 @@ Every change is checked offline: the tests, a synth and `cfn-lint` of every exam
 | **IRSA** | IAM Roles for Service Accounts: an IAM role trusts a pod's ServiceAccount through the cluster's OIDC provider |
 | **EKS Pod Identity** | the newer alternative to IRSA: EKS maps a namespace and ServiceAccount to a role |
 | **VPC CNI** | the EKS add-on that gives pods VPC addresses |
+| **Secondary CIDR, pod subnet** | a second address range added to the VPC, used only for pod addresses (default `100.64.0.0/16`), and the per-AZ subnets cut from it, tagged `kubernetes.io/role/cni=1` (1.3, "Bringing your own VPC") |
+| **SNAT** | the VPC CNI rewrites a pod's source address to its node's address for traffic leaving the VPC, so the pod range needs no route outside it |
 | **Separate pod range / pods in the private subnets** | where pods get addresses (Network, 1.3). The default, `network.layout: 'B'`, gives pods a non-routable second range; `'A'` puts them in the routable private subnets. |
 | **ESO** | External Secrets Operator: copies Secrets Manager secrets into Kubernetes |
 | **LBC** | AWS Load Balancer Controller: puts the Envoy pods behind the ALB, or creates the ALB with `ingress.mode: 'alb'` |
