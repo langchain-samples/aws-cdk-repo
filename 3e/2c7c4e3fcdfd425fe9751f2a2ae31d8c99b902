@@ -1,0 +1,119 @@
+post-deploy/01-seed-secrets.sh
+  s_ada6696b3cd877::t_84c3a55d16c633 56-69,104,114
+  s_ada6696b3cd877::t_dcc7e416952ecc 3-4,8,13,16-21,50-55,100-103,105-113,115
+post-deploy/04-cluster-prereqs.sh
+  s_ada6696b3cd877::t_84c3a55d16c633 256,258,318-321,362-364,372,379-387,400-406,495-497,509-510,539-562,564,588
+  s_ada6696b3cd877::t_0b9a7f4bdd8572 5,30-32,241-243,246-247,249,253-255,257,260,314-317,563,586-587,625-654,667-669,688,690,697,707
+lib/components/s3-buckets.ts
+  s_ada6696b3cd877::t_84c3a55d16c633 18,42
+  s_ada6696b3cd877::t_261d912666d5cd 5-6,43-44
+helm/langsmith-sandboxes.yaml
+  s_ada6696b3cd877::t_84c3a55d16c633 7-38
+  s_ada6696b3cd877::t_9d6ec1ff2f2bf3 1-6,39-42
+lib/components/sandbox-nodes.ts
+  s_ada6696b3cd877::t_84c3a55d16c633 9-94
+  s_ada6696b3cd877::t_1a9d9d3254c227 1-8,95-112
+lib/iam/roles.ts
+  s_ada6696b3cd877::t_84c3a55d16c633 28,32,204-222,285
+  s_ada6696b3cd877::t_e118457de2d2dd 21,303
+test/fixtures/cdk-outputs-sandboxes.json
+  s_ada6696b3cd877::t_84c3a55d16c633 41-42
+  s_ada6696b3cd877::t_f370daf412b2a1 1-40,43-44
+lib/config/validate.ts
+  s_ada6696b3cd877::t_84c3a55d16c633 165-166,197-198
+  s_ada6696b3cd877::t_2c39fcb16cc6c4 5-9,199-231,245,248
+tools/sandbox-node-bootstrap.sh
+  s_ada6696b3cd877::t_84c3a55d16c633 13-56
+  s_ada6696b3cd877::t_00677aa9f251cd 1-12,57
+lib/components/node-group.ts
+  s_ada6696b3cd877::t_84c3a55d16c633 10-11,13,18-58,79-80
+test/helm-files.test.ts
+  s_ada6696b3cd877::t_84c3a55d16c633 137-138
+  s_ada6696b3cd877::t_d9b00b60f5a329 116-136,139-150
+lib/config/types.ts
+  s_ada6696b3cd877::t_84c3a55d16c633 203-222,359-361,390-391,416-440,449
+  s_ada6696b3cd877::t_253e0c229955e8 69-70,184-202,441-448
+README.md
+  s_ada6696b3cd877::t_84c3a55d16c633 48,58,132,170-171,179,215,230,275,350,407-408,443,451,453,455-456,477-478,540,598-647,715,774,818-819,822-823
+  s_ada6696b3cd877::t_8d79a5dc2fbcb4 836,838,869-870,890-894,928,956-959
+bin/sizes.ts
+  s_ada6696b3cd877::t_84c3a55d16c633 15,34
+  s_ada6696b3cd877::t_eb2d5e1581c23f 35-39
+lib/components/juicefs-cache.ts
+  s_ada6696b3cd877::t_84c3a55d16c633 11-14
+  s_ada6696b3cd877::t_4211b35d034f4b 1-10,15-91
+lib/components/secrets.ts
+  s_ada6696b3cd877::t_84c3a55d16c633 23,31-32,59
+  s_ada6696b3cd877::t_df42e330d6b3b5 4-5,60-62
+lib/iam/policies.ts
+  s_ada6696b3cd877::t_84c3a55d16c633 165-178
+  s_ada6696b3cd877::t_2bee96373030de 159-164,179-190
+tools/check-offline.sh
+  s_ada6696b3cd877::t_84c3a55d16c633 44-47
+lib/stacks/langsmith-stack.ts
+  s_ada6696b3cd877::t_84c3a55d16c633 15,24,31,35,53-54,95,148,161-167,196-203,230,270-271,326-334
+tools/list-resources.sh
+  s_ada6696b3cd877::t_84c3a55d16c633 87
+test/sandboxes.test.ts
+  s_ada6696b3cd877::t_84c3a55d16c633 23,40,59,62-280,285
+  s_ada6696b3cd877::t_cab0bbf143f740 1-22,24-39,41-58,60-61,281-284,286
+tools/teardown.sh
+  s_ada6696b3cd877::t_84c3a55d16c633 73
+  s_ada6696b3cd877::t_62a796f9fff780 67-68,72,188-189
+post-deploy/05-dns-and-smoke-test.sh
+  s_ada6696b3cd877::t_84c3a55d16c633 49,104-106,118,126-156
+  s_ada6696b3cd877::t_739fd86219f223 20-22,157-161
+lib/outputs.ts
+  s_ada6696b3cd877::t_84c3a55d16c633 56
+  s_ada6696b3cd877::t_42f0025defb6d3 48-55
+config/example.ts
+  s_ada6696b3cd877::t_306d94c2758b57 111-115
+config/examples/sandboxes.ts
+  s_ada6696b3cd877::t_6f881ff8f5e5a7 1-18
+iam/cdk-execution-policy-2-data.json
+  s_ada6696b3cd877::t_b9fd41c230b6af 94-99,178-182,193,196-197
+iam/operator-policy.json
+  s_ada6696b3cd877::t_d27412f7873600 35,48-49
+k8s/externalsecrets-sandboxes.yaml
+  s_ada6696b3cd877::t_8ba4fb29b2c24d 1-33
+k8s/externalsecrets.yaml
+  s_ada6696b3cd877::t_c97a59d565aeea 12,14,40
+k8s/httproute-sandbox-services.yaml
+  s_ada6696b3cd877::t_622fac6c5cf992 1-29
+lib/components/eks-addons.ts
+  s_ada6696b3cd877::t_f1b4563fbc23d6 17-18,60-61,81
+lib/components/load-balancer.ts
+  s_ada6696b3cd877::t_f946dcd63e84c1 7-9,42-45,89,97-103,115,117-121
+lib/config/sizing.ts
+  s_ada6696b3cd877::t_94bdcc91d35e47 132-174
+lib/iam/pack.ts
+  s_ada6696b3cd877::t_7d5de90a28f1f7 14-15,47
+lib/naming.ts
+  s_ada6696b3cd877::t_e72e316fff5494 9,38-40,56,74,89-90
+post-deploy/03-mirror-images.sh
+  s_ada6696b3cd877::t_a866619640b158 16,42-47,49-50
+post-deploy/lib.sh
+  s_ada6696b3cd877::t_91cba29338a39c 150-152,207
+test/helpers.ts
+  s_ada6696b3cd877::t_0d3f5e0553afa9 18
+test/iam.test.ts
+  s_ada6696b3cd877::t_0b63decda440ef 222,224
+test/policy-files.test.ts
+  s_ada6696b3cd877::t_99fb6afd732ec0 82-84,87-104,192
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "3e2c7c4e3fcdfd425fe9751f2a2ae31d8c99b902",
+  "prompts": {},
+  "sessions": {
+    "s_ada6696b3cd877": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "aa6a9772-408c-46df-99fc-67087f8591b1",
+        "model": "claude-fable-5-1"
+      },
+      "human_author": "haithamshahin333 <42976403+haithamshahin333@users.noreply.github.com>"
+    }
+  }
+}
