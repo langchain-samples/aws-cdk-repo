@@ -9,7 +9,7 @@ This repository builds a private LangSmith installation in your AWS account:
 - **Part 1** explains what gets built and why. Read it once, before you start.
 - **Part 2** is the deployment, step by step.
 - **Part 3** covers day-2 changes.
-- **The Appendix** holds the reference tables for your network and security reviewers. Unfamiliar terms are in the glossary (Appendix H).
+- **The Appendix** holds the reference tables for your network and security reviewers. Unfamiliar terms are in the glossary (Appendix G).
 
 **Placeholders used throughout:**
 - `<env>`: your config file's name (`config/<env>.ts`).
@@ -354,7 +354,7 @@ Your settings are one TypeScript file, `config/<env>.ts`. Copy the example that 
 
 ## Part 2: Deploy, step by step
 
-> **Status:** the default path (separate pod range, Envoy Gateway, Steps 1–8) has been run on AWS, with Steps 7–8 run from a laptop rather than the bastion. Appendix F lists what hasn't been run yet. Run it first in a test account.
+> **Status:** the default path (separate pod range, Envoy Gateway, Steps 1–8) has been run on AWS, with Steps 7–8 run from a laptop rather than the bastion. Run it first in a test account.
 
 Plan for about half a day; the first `cdk deploy` alone takes 45–75 minutes. The identities are described in 1.4.
 
@@ -392,7 +392,7 @@ Every script after Step 4 reads its inputs from `out/cdk-outputs.json`. So one c
 - **On the bastion,** the tools are installed at boot. Each script names any tool that is missing.
 
 **Account checks:**
-- [ ] **Region:** at least 2 AZs that EKS supports. EKS rejects the AZ IDs `use1-az3`, `usw1-az2` and `cac1-az3`. Names map to different IDs in each account, so check with `aws ec2 describe-availability-zones --query 'AvailabilityZones[].[ZoneName,ZoneId]'`.
+- [ ] **Region:** at least 2 AZs that EKS supports. EKS rejects the AZ IDs `use1-az3`, `usw1-az2` and `cac1-az3`. Names map to different IDs in each account, so check with `aws ec2 describe-availability-zones --query 'AvailabilityZones[].[ZoneName,ZoneId]'`. AWS GovCloud (US) works: export `AWS_PARTITION=aws-us-gov` in Step 2. The China regions are not supported, because the scripts and policies assume `amazonaws.com` hostnames.
 - [ ] **vCPU quota** ("Running On-Demand Standard instances"): lab 66, small 98, medium 258, large 322.
 - [ ] **Elastic IPs:** 1 per NAT gateway. The default quota is 5.
 - [ ] **Organization policies (SCPs)** allow CloudFormation and the services in 1.1. Add any mandatory tags as `extraTags`. If new roles need a permissions boundary, set `permissionsBoundaryArn`.
@@ -642,7 +642,7 @@ npx cdk deploy --all -c config=<env>  # also rewrites out/cdk-outputs.json
 
 **Before you deploy a change:**
 - **Never accept a replacement** of a database, the cluster or the VPC without a plan.
-- **Changes that replace:** `name`, the cluster's subnets, a database's major engine version, and the VPC's `layout` or `addressPlan`.
+- **Changes that replace:** `name`, the cluster's subnets, and the VPC's `layout` or `addressPlan`. A database's major engine version upgrades in place (Upgrades, below).
 - **Turning a component off deletes it.** Buckets, secrets and the KMS key are kept by default (`dataRemovalPolicy: 'retain'`), and RDS keeps a final snapshot.
 - **Deletion protection** (stage and prod): to delete a database or the ALB, first set `sizes: { deletionProtection: false }` and deploy.
 
@@ -675,6 +675,7 @@ For more load, the LangSmith replica counts go in `helm/langsmith-values.yaml`; 
 - **EKS:** raise `eks.version` by one minor version, then `cdk deploy`. Unpinned add-ons and the nodes follow. Then:
   - set `CLUSTER_AUTOSCALER_IMAGE_TAG` to the new minor version, and run `03` and `04 platform`;
   - check that the Envoy Gateway release supports the new Kubernetes version.
+- **PostgreSQL major version** (`postgres.core.engineVersion`, `postgres.metastore.engineVersion`): take a manual snapshot first, then raise the version and `cdk deploy`. RDS upgrades the instance in place, with downtime, and CDK creates a new parameter group, `<instance>-pg<major>`. Run `cdk diff` first: it should show the instance modified, not replaced. Minor versions upgrade automatically.
 - **Envoy Gateway:** change `ENVOY_GATEWAY_CHART_VERSION` and `ENVOY_PROXY_IMAGE_TAG` together, then run `03` and `04 envoy-gateway`. v1.9 is supported until 2027-02-14.
 - **Platform charts:** change the `*_CHART_VERSION`, then run `03` and `04 platform`. For the Load Balancer Controller, also compare its published IAM policy with `lib/iam/aws-load-balancer-controller-policy.json`.
 - **The CDK itself:** bump `aws-cdk-lib` and `aws-cdk` together, then run `npm install`, `npm test`, and `cdk diff` for each environment. Expect no changes.
@@ -731,6 +732,14 @@ This app turns on what AWS offers; it does not automate a restore.
   ```
 
 Afterwards, `./tools/list-resources.sh <name>` shows what is left (read-only).
+
+**Who:** stage 1 needs cluster-admin access to EKS (the script runner, or the bastion). Stages 2–4 run as the deployer, plus:
+- read access to the account, for `list-resources.sh`;
+- `cloudformation:DescribeStacks` on `<name>-langsmith`;
+- with ingress mode `alb`: `route53:ListResourceRecordSets` and `route53:ChangeResourceRecordSets` on the private zone;
+- with `dataRemovalPolicy: 'destroy'`: `s3:ListBucket` and `s3:DeleteObject` on the buckets `<name>-*`.
+
+The script stops with the missing permission named, rather than skipping a step that would make `cdk destroy` fail later. These rights are not in `iam/operator-policy.json` on purpose: the script runner should not be able to delete trace data.
 
 `teardown.sh` works in four stages:
 1. **In the cluster:** it uninstalls LangSmith and Envoy Gateway, and removes the load balancers and volumes that controllers created. It only touches the LangSmith and `envoy-gateway-system` namespaces.
@@ -951,25 +960,7 @@ With a zone you bring (`dns.privateZone.existingZoneId`), you can narrow it befo
 | A SmithDB pod stays Pending | no node has room for its largest pod, or its volume failed; check `kubectl get pvc` and the EBS CSI logs |
 | Reinstalling with the same `name` fails on secrets | retained or recently deleted secrets keep their names; delete them (test environments only) or use another `name` |
 
-### F. What has been run on AWS
-
-Every change is checked offline: the tests, a synth and `cfn-lint` of every example, `shellcheck`, `helm template` of the rendered values, and the Envoy manifests against their CRDs.
-
-| Area | Status |
-|---|---|
-| Both stacks with only the scoped policies: deploy (IRSA, a new VPC with a separate pod range, `size: 'lab'`, the bastion) | **Run**: about 21 minutes |
-| Separate pod range: pods in 100.64.0.0/16 through the subnet tags, VPC CNI v1.23.1, pod interfaces on the cluster security group | **Run** |
-| EKS 1.34, the node group and add-ons, IRSA roles, RDS 16 and 18, Valkey, EBS volumes, secrets, private zone | **Run** |
-| `00`–`05` and the LangSmith 0.17 install, run from a laptop through the allow-listed EKS endpoint, with Envoy Gateway ingress (ALB targets healthy, `https://<hostname>` → 200) | **Run** |
-| Teardown (including `--cluster-only` and `--skip-cluster`), and the tag conditions in the policies (EC2 and KMS deletes, the OIDC provider, certificate imports); an earlier version ran teardown with pods in the private subnets | **Not yet run** on this version |
-| `04` from the bastion; `CUSTOM_CA_BUNDLE_FILE`; agent deployments | **Not yet run** |
-| `ingress.mode: 'alb'`, Pod Identity, bring-your-own VPC and roles | **Not yet run** |
-
-**For a path not yet run:**
-1. Deploy it first in a test account, with a fresh `name`, `dataRemovalPolicy: 'destroy'` and `--no-rollback`.
-2. Run the scripts one step at a time.
-
-### G. Repository map
+### F. Repository map
 
 | Path | Contents |
 |---|---|
@@ -988,7 +979,7 @@ Every change is checked offline: the tests, a synth and `cfn-lint` of every exam
 | `out/` | generated and git-ignored: `cdk-outputs.json`, `kubeconfig`, the rendered files, `helm-install-langsmith.sh` |
 | `secrets/` | git-ignored: your license and PEM files, while you need them |
 
-### H. Glossary
+### G. Glossary
 
 | Term | Meaning |
 |---|---|
